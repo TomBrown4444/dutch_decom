@@ -1,270 +1,223 @@
-# Dutch North Sea Decommissioning Investigation
+# North Sea Decommissioning — Methodology
 
-A data pipeline that builds the operator accountability table that does not yet publicly
-exist in the Netherlands — identifying which companies are sitting on inactive offshore
-wells with no decommissioning programme, and how long those wells have been idle.
-
----
-
-## The Story
-
-When an oil or gas well stops producing, the operator is legally required to decommission
-it: plug the wellbore with cement, remove the subsea infrastructure, and restore the
-seabed. In the UK, the North Sea Transition Authority (NSTA) publishes a public table
-showing which operators are behind schedule. **The Netherlands has no equivalent.**
-
-This pipeline creates that table from scratch using two public datasets.
-
-### Why it matters
-
-**EBN** (Energie Beheer Nederland — the Dutch state energy company) holds a statutory
-40% share in every upstream oil and gas licence in the Netherlands. This means that
-roughly 40% of every decommissioning bill ultimately falls on the Dutch taxpayer by law.
-Delayed decommissioning is therefore not just a regulatory problem — it is a direct
-fiscal liability for the Dutch state.
-
-The regulatory body is **SodM** (Staatstoezicht op de Mijnen — the Dutch mining
-inspectorate). SodM publishes annual compliance reports, but these are PDFs, not
-structured data, and do not contain a ranked operator table.
+**Project:** North Sea Decom  
+**Status:** Data collection and analysis complete. Journalistic verification in progress.  
+**Scope:** United Kingdom Continental Shelf (UKCS) and Dutch Continental Shelf (NCS)  
+**For:** Editorial review
 
 ---
 
-## What We Found
+## Overview
 
-Analysis of 6,723 Dutch wells identified **320 inactive offshore wells** across 57
-operators with no completed decommissioning programme.
+This document explains how this investigation was built, where the data comes from, and why the methodology is sound. It is written for an editorial audience and explains technical terms where they arise.
 
-| Legal owner | Inactive wells | Mean years idle | All inherited? |
-|---|---|---|---|
-| Eni Energy Netherlands B.V. | 109 | 33 years | Yes |
-| Tenaz Energy Netherlands B.V. | 67 | 33 years | Yes (ex-Shell/NAM) |
-| TotalEnergies EP Nederland B.V. | 48 | 30 years | Yes |
-| TAQA Offshore B.V. | 27 | 31 years | Yes (ex-Amoco/BP) |
-| Wintershall Noordzee B.V. | 19 | 25 years | Partial |
+The investigation uses publicly available government data from two countries to examine the same question from two angles: which oil and gas operators are sitting on inactive offshore wells that have not been decommissioned, how long have those wells been inactive, and who is ultimately liable for the cost of cleaning them up?
 
-**91% of inactive wells (290 of 320) have been transferred** from the original operator
-to a different legal owner. The company that drilled the well is almost never the company
-that now owes the decommissioning bill.
+Decommissioning refers to the process of permanently plugging and abandoning a well once it has finished producing — sealing it to prevent leaks, removing infrastructure, and restoring the seabed. In the North Sea this is a legal obligation under both UK and Dutch law. It is also expensive: the UK industry regulator estimates the total cost at £44 billion for UK waters alone.
 
-**24 wells** are confirmed inactive by production data — zero output for two or more
-consecutive years — despite remaining in formal "Suspended" or "Closed-In" status with
-no decommissioning programme started.
-
-**Tenneco Netherlands Inc.** holds 7 wells idle for an average of 53 years. Tenneco
-sold its oil business in the 1980s; this Dutch subsidiary appears dormant, and no other
-entity has assumed formal legal ownership.
-
-**44 ghost wells** — recently drilled (2021–2026) with no status classification yet —
-are concentrated among ONE-Dyas, Petrogas, Neptune, and Dana. These may tip into the
-inactive category without ever appearing in a compliance table.
+The investigation does not rely on leaked documents, confidential sources, or non-public data. Every finding is derived from open government datasets that anyone can access. The value of the investigation is in combining datasets that have never been joined before, and asking questions of the data that the regulators themselves have not published answers to.
 
 ---
 
-## Glossary
+## Part One — United Kingdom
 
-**Borehole / well** — a hole drilled into the seabed to reach an oil or gas reservoir.
-The words are used interchangeably in Dutch regulatory data.
+### The Regulatory Context
 
-**Suspended** — the well has been temporarily shut in but not permanently abandoned.
-Technically awaiting a decision on future use or decommissioning.
+The North Sea Transition Authority (NSTA) is the UK regulator for oil and gas on the UK Continental Shelf. Under the Petroleum Act 1998 and the Energy Act 2016, operators holding licences to produce oil or gas are legally required to decommission wells once production ends. The NSTA issues consents — formal regulatory approvals — setting deadlines for each well's decommissioning. A well that has missed its consent deadline is described as "out of consent."
 
-**Closed-In** — similar to Suspended; the well is sealed at the surface but the
-wellbore is intact underground. Also awaiting a decommissioning decision.
+In December 2025 the NSTA published, for the first time, a table naming 13 operators that had collectively missed decommissioning deadlines on 153 wells. This was reported by trade publications including Energy Voice. No mainstream news outlet investigated it further at the time, and no one examined it at well level.
 
-**Plugged and abandoned (P&A)** — the well has been permanently decommissioned:
-cement plugs seal the wellbore, infrastructure is removed. This is the end state.
-P&A wells are excluded from the investigation.
+### What the NSTA Table Does Not Tell You
 
-**Sidetracked** — a new borehole drilled from a point partway down an existing well,
-usually because the original path encountered a problem. Sidetracked wells can be
-left in limbo if the programme that created them was abandoned.
+The NSTA's published table is an operator-level snapshot — it names companies and counts wells, but gives no information about which specific wells are affected, where they are, how long they have been inactive, or who ultimately owns the companies named. It also does not identify the larger population of wells that are inactive but not yet formally in breach — operators who are not yet on the NSTA's radar but whose well portfolios suggest they will be.
 
-**Ghost well** — a well in the NLOG dataset with no status code assigned. All 44
-ghost wells in this dataset were drilled in 2021 or later and are likely pending
-classification.
+This investigation answers those questions.
 
-**resultCode** — NLOG's code for what the well found: `GAS` (gas), `OIL` (oil),
-`DRY` (nothing commercially viable), `FLR` (shows of gas/oil but not commercial),
-`OAG` / `OLS` / `GOS` / `GSS` / `OWGS` / `GWOS` (various mixed hydrocarbon results).
+### Dataset 1 — NSTA Well Data
 
-**clientOrgName** — the operating company: who drilled the well and whose name is on
-the licence as operator of record.
+**Source:** North Sea Transition Authority  
+**Access:** Publicly available, no registration required  
+**Format:** Live database accessed via a standard web API (an Application Programming Interface — a method of querying a database programmatically rather than downloading a file manually)  
+**Endpoint:** `https://services-eu1.arcgis.com/OZMfUznmLTnWccBc/arcgis/rest/services/UKCS_offshore_wellbore_top_holes_(WGS84)/FeatureServer/0/query`  
+**Records retrieved:** 5,065 suspended wells  
+**Updated:** Live service
 
-**legalOwnerName** — the current licence holder: who is legally responsible for
-decommissioning today. These diverge when a licence is sold or transferred.
+The NSTA maintains a public database of every well drilled on the UK Continental Shelf through its Well Operations Notification System (WONS). This database is accessible via an industry-standard mapping API and returns records in a machine-readable format (JSON — a standard data format used across the web).
 
-**EBN** — Energie Beheer Nederland. Dutch state company that holds a mandatory 40%
-interest in all upstream Dutch licences. EBN does not operate wells itself but
-co-funds everything, including decommissioning.
+Each well record contains the following fields used in this investigation:
 
-**SodM** — Staatstoezicht op de Mijnen. The Dutch mining inspectorate. Publishes
-annual compliance reports at https://www.sodm.nl/publicaties (PDFs only, not
-structured data).
+| Field | Description |
+|---|---|
+| `TDOPERATOR` | The name of the operating company, as submitted by the operator to WONS. Stored in full legal name format, all uppercase. |
+| `COMPLESTAT` | Completion status — describes the mechanical state of the well (e.g. whether abandonment work has begun and at what stage). |
+| `WELLOPSTAT` | Operational status — describes whether the well is active, suspended, or decommissioned. |
+| `SPUDDATE` | The date drilling began, stored as a Unix timestamp (a number representing milliseconds since 1 January 1970 — a standard date storage format that requires conversion to a human-readable date). |
+| `WELLREGNO` | The well registration number — a unique identifier in the format used across the North Sea industry (e.g. `211/18-1`). |
+| `geometry` | The geographic coordinates of the well's surface location, stored in WGS84 format (the same coordinate system used by GPS). |
 
-**NLOG** — Nederlands Olie en Gas (the Dutch oil and gas data portal at nlog.nl).
-Operated by TNO on behalf of the Dutch government. The primary source for both
-datasets used in this pipeline.
+**How the data was retrieved:** Because the API returns a maximum of 1,000 records per request, the pipeline makes multiple requests in sequence, incrementing the starting position each time, until all records have been retrieved. This is standard practice when working with large API datasets and is called pagination.
 
-**Informal cessation** — a well where no formal cessation date is recorded but
-production data confirms zero output for two or more consecutive years. These
-wells are inactive in practice but have not been formally closed in the regulatory
-record.
+**A data quality note:** The word "Decommissioned" is misspelled throughout the NSTA database as "Decomissioned" (one m). All filters in the pipeline match this misspelling exactly. This is documented in the data diary and does not affect the accuracy of the results — it is simply a quirk of the source data.
+
+### Dataset 2 — NSTA Non-Compliance Table
+
+**Source:** North Sea Transition Authority  
+**Access:** Publicly available on the NSTA website  
+**URL:** `https://www.nstauthority.co.uk/regulatory-information/decommissioning/well-decommissioning/`  
+**Format:** Table published on a web page, manually extracted to CSV  
+**Records:** 22 operators listed
+
+This is the table the NSTA published in December 2025 naming operators who have missed decommissioning consent deadlines. It contains five columns: operator name, total wells to be decommissioned, wells within consent, wells out of consent, and percentage in consent.
+
+Because this table is published as a static document rather than a machine-readable dataset, it was manually extracted and saved as a CSV file (a simple spreadsheet format readable by any data analysis tool).
+
+### How the Two UK Datasets Were Combined
+
+The two datasets were joined on operator name — matching each well in the NSTA database to the corresponding operator row in the non-compliance table. This is technically straightforward but required significant manual work because operator names are recorded differently in the two sources. The NSTA database uses full legal names in uppercase as submitted by operators (for example, `NEO NEXT + ENERGY RESOURCES UK LIMITED`), while the non-compliance table uses shorter display names (`NEO Next`). A manual reconciliation dictionary was built by comparing the complete list of unique operator names from both datasets side by side.
+
+Four operators in the non-compliance table — Total Energies, CalEnergy, Energean, and Petrogas — were not matched to their equivalents in the well database during this analysis. Their aggregate out-of-consent well count is included in the verified total of 153 but is not yet attributed at well level. Resolving these requires identifying the exact legal names used in WONS submissions and is noted as an outstanding task before publication.
+
+### Analytical Framework — UK
+
+Wells were filtered to those with operational status `Suspended` and a valid operator name. These were then divided into two groups:
+
+**Group A — In decommissioning process but incomplete**  
+Wells with completion status `Abandoned Phase 1` or `Abandoned Phase 2`. These are wells that have formally entered the abandonment process but have not finished it. When joined to the non-compliance table, these are the wells where out-of-consent designations are attributed.
+
+**Group B — Plugged but not in any decommissioning programme**  
+Wells with completion status `Plugged`. These wells have stopped producing and been physically plugged, but have not formally entered any abandonment programme. They do not appear in the NSTA's published non-compliance table because they have not yet breached a deadline. They represent the forward-looking liability — operators accumulating inactive wells with no decommissioning plan on record.
+
+**Verification:** The pipeline's output was cross-checked against the NSTA's published figures. The total of 153 out-of-consent wells across 13 operators matches exactly. This sense check confirms the join logic is correct.
 
 ---
 
-## Data Sources
+## Part Two — The Netherlands
+
+### The Regulatory Context
+
+The Dutch equivalent of the NSTA is SodM (Staatstoezicht op de Mijnen — the State Supervision of Mines). Operators are required to decommission wells under the Dutch Mining Act (Mijnbouwwet). Unlike the UK, the Netherlands has a structural feature that makes the taxpayer exposure more direct: EBN (Energie Beheer Nederland), a state-owned company, holds a statutory 40% share in virtually all Dutch oil and gas production licences. This means the Dutch state is automatically co-liable for a significant portion of decommissioning costs, regardless of what the operator does.
+
+Crucially, the Netherlands has never published an operator-level non-compliance table equivalent to the NSTA's December 2025 disclosure. There is no Dutch equivalent document. This investigation therefore does not compare against a published standard — it builds the accountability picture from scratch using raw well data and production records.
 
 ### Dataset 1 — NLOG Borehole Data
-- **URL:** `https://www.nlog.nl/nlog-mapviewer/rest/brh/boreholes`
-- **Method:** POST (empty body) — requires a session cookie seeded by a prior GET
-  to `https://www.nlog.nl/datacenter/brh-overview`
-- **Returns:** 6,723 wells in a single JSON array (no pagination)
-- **Updated:** Daily
-- **Authentication:** None — fully open
 
-### Dataset 2 — Production Figures Per Well
-- **URL:** `https://www.nlog.nl/nlog-mapviewer/rest/prodfigures/well`
-- **Method:** POST with body `{"yearStart": N, "yearEnd": N, "product": "Gas"|"Oil", "production": "Produced"}`
-- **Returns:** Monthly production figures per well for the requested year
-- **Available from:** 2003 only (pre-2003 data not in public domain)
-- **Authentication:** None — same session cookie as Dataset 1
+**Source:** TNO (Netherlands Organisation for Applied Scientific Research) — Geological Survey of the Netherlands, on behalf of the Dutch Ministry of Economic Affairs  
+**Portal:** `https://www.nlog.nl` (the Dutch Oil and Gas portal, known as NLOG)  
+**Access:** Publicly available, no registration required  
+**Format:** JSON data accessed via a web API  
+**Endpoint:** `https://www.nlog.nl/nlog-mapviewer/rest/brh/boreholes`  
+**Records retrieved:** 6,723 total wells (all jurisdictions); 2,195 offshore wells  
+**Updated:** Daily
 
----
+NLOG is the Dutch equivalent of the NSTA's public data portal. It is managed by TNO — the Netherlands Organisation for Applied Scientific Research — on behalf of the Dutch government and contains administrative records for every borehole drilled in Dutch territory and on the Dutch continental shelf.
 
-## Repository Structure
+Unlike the UK API, which returns records in pages of 1,000 requiring multiple requests, the NLOG API returns all 6,723 records in a single response. No pagination is required.
 
-```
-dutch_decom/
-├── netherlands/
-│   ├── pipeline_nl.py          # entry point — run this
-│   ├── src/
-│   │   ├── fetch_nl.py         # API calls and raw data saving
-│   │   ├── clean_nl.py         # loading, date conversion, group filtering
-│   │   └── analyse_nl.py       # operator tables, crossref, accountability table
-│   ├── notebooks/
-│   │   └── explore_nl.ipynb    # exploratory notebook — all seven analysis sections
-│   ├── data/                   # gitignored
-│   │   ├── raw/                # raw JSON from NLOG APIs
-│   │   ├── processed/          # intermediate CSVs
-│   │   └── state/              # pipeline state (hash checks etc.)
-│   └── outputs/                # final deliverables
-│       ├── nl_wells_analysis.csv       # accountability table by legal owner
-│       └── nl_wells_by_operator.csv   # reference table by operator
-└── README.md
-```
+The API requires a specific type of request (a POST request, as opposed to a simple page visit) and a session cookie set by first loading the datacenter page. Both of these are standard web behaviours that the pipeline handles automatically using Python's `requests.Session()` — a tool that manages web sessions the same way a browser does.
 
-### Output files
+Each well record contains the following fields used in this investigation:
 
-**`nl_wells_analysis.csv`** — the primary accountability table. One row per legal
-owner. Columns: `legalOwnerName`, `inactive_well_count`, `mean_years_inactive`,
-`max_years_inactive`, `confirmed_inactive`, `transferred_wells`, `result_codes`,
-`earliest_spud`, `ghost_wells`.
+| Field | Description |
+|---|---|
+| `boreholeName` | Full well name |
+| `shortName` | Abbreviated well name |
+| `clientOrgName` | The company that operated the well at the time of drilling |
+| `legalOwnerName` | The current legal owner of the well — which may be a different company from the original operator |
+| `statusDescription` | Current status of the well (e.g. Suspended, Closed-In, Plugged and abandoned) |
+| `resultCode` | What the well found (e.g. GAS, OIL, DRY) |
+| `onOffshore` | Whether the well is onshore (`ON`) or offshore (`OFF`) |
+| `startDate` | Date drilling began — stored as a Unix timestamp, same format as the UK data |
+| `endDate` | Date the well ceased operation — stored as a Unix timestamp |
+| `confidentialityDate` | The date from which the well's data became public |
+| `blockCd` | The licence block identifier |
 
-**`nl_wells_by_operator.csv`** — same data grouped by `clientOrgName` (operator).
-Note: operator names are not normalised in the NLOG source data. Multiple name
-variants for the same company (e.g. "Placid", "Placid International Oil, Ltd.",
-"Placid International Oil Ltd.") will appear as separate rows.
+**An important distinction from the UK data:** The NLOG data contains two separate operator fields — `clientOrgName` (the company that drilled and operated the well) and `legalOwnerName` (the company currently holding legal responsibility for it). In the UK data only a single operator field exists. The presence of both fields in the Dutch data makes it possible to identify wells where legal ownership has been transferred since drilling — a significant finding in its own right.
 
-**`group_a_by_operator.csv`** — detailed well-level operator table (processed/).
+**Data quality:** Status values in the NLOG data are clean, consistently formatted English terms with no misspellings — a contrast to the UK data. Dates are stored in the same Unix millisecond format and require the same conversion.
 
-**`informal_cessation_wells.csv`** — wells confirmed inactive by production
-crossref (processed/).
+### Dataset 2 — NLOG Production Figures
 
-**`ownership_transfers.csv`** — all wells where operator ≠ legal owner (processed/).
+**Source:** NLOG / TNO  
+**Endpoint:** `https://www.nlog.nl/nlog-mapviewer/rest/prodfigures/well`  
+**Format:** Monthly production volumes per well, per year  
+**Available from:** January 2003 (pre-2003 data not in the public domain)
 
----
+Because the Netherlands has no published non-compliance table, this investigation uses a different approach to identify inactive wells: production data. Under Dutch law (Article 111 of the Mining Decree), operators are required to report monthly production figures to TNO within four weeks of each month's end. These figures are then published publicly within a further four weeks. The result is a near-real-time public record of what each well is producing month by month.
 
-## Setup and Usage
+A well that stops appearing in production figures, or that shows zero production across consecutive months, has ceased producing — regardless of what its formal status record says. Cross-referencing status data against production data identifies wells where cessation is confirmed by two independent sources, and also identifies wells where `endDate` is absent from the status record but production data confirms the well has been silent for years. These are described in the analysis as "informally ceased" wells.
 
-### Requirements
+### Analytical Framework — Netherlands
 
-- Python 3.11+
-- `pip install requests pandas python-dotenv`
+All 6,723 records were retrieved and filtered to offshore wells (`onOffshore == 'OFF'`), giving 2,195 offshore wells. These were then divided into analytical groups:
 
-### Run the full pipeline
+**Group A — Inactive offshore wells (core investigation population)**  
+Wells with `statusDescription` of `Suspended` or `Closed-In`. These are wells that have formally stopped operating but have not been plugged and abandoned. They are the Dutch equivalent of the UK's Group A and represent the population for which decommissioning liability is most immediate.
 
-```bash
-cd dutch_decom
-python netherlands/pipeline_nl.py
-```
+**Group B — Sidetracked wells**  
+Wells with `statusDescription` of `Sidetracked`. A sidetracked well is one from which a second borehole has been drilled at an angle — the original borehole may be inactive while the sidetrack continues producing. These require case-by-case examination and are treated as a secondary population.
 
-This will:
-1. Seed an NLOG session and fetch all boreholes (~6,700 records)
-2. Fetch Gas and Oil production for 2020–2025 (12 API calls)
-3. Filter offshore wells, split groups, run analysis
-4. Write CSVs to `netherlands/data/processed/` and `netherlands/outputs/`
+**Ghost wells**  
+Wells with no `statusDescription` recorded (`null`). These have no formal operational classification in the public record.
 
-### Re-run analysis without re-fetching
+**Excluded:**  
+Wells with `statusDescription` of `Plugged and abandoned` (decommissioning complete), `Producing/Injecting` (active), or `Monitoring` (designated for subsurface observation only).
 
-If the raw data files already exist and you just want to re-run the analysis:
+**Production crosscheck:** Group A wells were cross-referenced against production figures to identify those with confirmed zero output over recent years. This provides independent corroboration of inactivity beyond the status field alone, and identifies wells where the formal status record may be lagging behind operational reality.
 
-```bash
-python netherlands/pipeline_nl.py --skip-fetch
-```
+**Ownership transfer analysis:** For each Group A well, `clientOrgName` and `legalOwnerName` were compared. Where these differ, the well's decommissioning liability has been transferred from the original operator to a different legal entity. The scale of this transfer across the Dutch dataset is a core finding of the investigation.
 
-### Explore interactively
-
-Open `netherlands/notebooks/explore_nl.ipynb` in Jupyter. The notebook contains
-all seven analysis sections with inline explanations, intermediate print-outs,
-and validation checks at each stage.
+**Verification:** Offshore totals and group counts were verified against direct queries run against the live API before analysis began. All figures match.
 
 ---
 
-## Analytical Framework
+## Data Pipeline — Technical Summary
 
-### Group A — Inactive offshore wells (core story)
-`statusDescription` in `{Suspended, Closed-In}` AND `onOffshore == OFF`
+The investigation is built as a reproducible Python data pipeline — a series of automated steps that retrieve, clean, join, and analyse the data. The code is version-controlled using Git (a standard tool for tracking changes to code) and stored in a private GitHub repository. Every step is documented and logged, and intermediate outputs are saved at each stage so any finding can be traced back to its source data.
 
-All result codes included. Non-hydrocarbon wells (dry holes, water wells) carry the
-same decommissioning obligation as producing wells.
+The pipeline is structured so that any team member or independent verifier can clone the repository, run the code, and reproduce every output from the raw data sources. The only manual steps are the initial extraction of the NSTA non-compliance table (a static web document rather than a machine-readable dataset) and the operator name reconciliation dictionary.
 
-**Note:** The original spec included a hydrocarbon-only `resultCode` filter, but
-this reduced the count from 320 to 237. Investigation of the 83 excluded wells
-confirmed they were Suspended/Closed-In offshore wells with the same decommissioning
-status as the hydrocarbon wells. The filter was dropped.
+**Libraries used:**
 
-### Group B — Sidetracked offshore wells
-`statusDescription == Sidetracked` AND `onOffshore == OFF`
+| Tool | Purpose |
+|---|---|
+| Python 3.13 | Programming language |
+| pandas | Data cleaning, joining, and analysis |
+| requests | Retrieving data from web APIs |
+| python-dotenv | Managing credentials securely |
+| pathlib | File path management |
+| hashlib | Detecting when source data has changed between pipeline runs |
 
-249 wells. Secondary story — incomplete or abandoned mid-drill.
-
-### Ghost wells
-`statusDescription` is null AND `onOffshore == OFF`
-
-44 wells, all drilled 2021–2026. Likely freshly drilled wells pending status
-classification rather than old unclassified records.
-
-### Excluded
-`statusDescription` in `{Plugged and abandoned, Producing/Injecting, Monitoring}`
+The pipeline includes a change detection function: each time it runs, it creates a fingerprint (called a hash) of the data it retrieved and compares it to the fingerprint from the previous run. If the data has changed, an email notification is sent automatically. This means the pipeline can be run on a schedule and will alert the team whenever the NSTA or NLOG updates their data — relevant if, for example, the NSTA publishes an updated non-compliance table.
 
 ---
 
-## Notes and Caveats
+## What This Investigation Does Not Claim
 
-- **Operator name fragmentation:** `clientOrgName` is a free-text field in the NLOG
-  source. The same company can appear under multiple name variants (particularly
-  "Placid" entities and the GDF/Total/Elf corporate chain). Totals in the operator
-  table undercount these entities. The legal owner table is not affected because
-  `legalOwnerName` reflects current registered entities.
+This document describes the data and methodology only. Journalistic findings, including named operators, specific well counts, and ownership conclusions, are being verified separately before publication and are not included here.
 
-- **Production data availability:** the NLOG production API covers 2003 onwards only.
-  Wells that ceased production before 2003 cannot be confirmed inactive via this
-  method. The `endDate` field in the borehole data is the primary cessation indicator
-  for older wells.
+The following are outstanding verification tasks before any findings can be published:
 
-- **EBN share:** EBN's statutory 40% share applies to production licences. The exact
-  liability split for individual decommissioning programmes requires licence-level
-  data not available in the public NLOG dataset.
+- Operator name reconciliation for four unmatched UK operators (Total Energies, CalEnergy, Energean, Petrogas)
+- Companies House verification of key operators' ultimate beneficial ownership and financial capacity
+- Cross-referencing Dutch findings against SodM annual inspection reports
+- Legal review of any ownership or liability claims
+- Right of reply from all named operators
 
-- **SodM compliance data:** SodM annual reports contain operator-level findings but
-  are PDFs rather than structured data. They are noted here as a manual reference
-  source and are not part of the automated pipeline.
+The data is preliminary. No finding from this pipeline should be treated as confirmed without independent journalistic verification.
 
 ---
 
-## Related
+## Data Licences
 
-- UK pipeline: see the `src/` directory in the parent project for the equivalent
-  NSTA-based analysis of the British continental shelf.
-- NSTA non-compliance table (UK): published at https://www.nstauthority.co.uk
-- SodM annual reports (NL): https://www.sodm.nl/publicaties
+**NSTA well data** is published under the Open Government Licence v3.0, which permits reuse with attribution.
+
+**NLOG borehole and production data** is published by TNO on behalf of the Dutch Ministry of Economic Affairs and is freely accessible for public use.
+
+All source data is retrieved from live government APIs and is reproducible. No proprietary or licensed data has been used.
+
+---
+
+## Contact
+
+Tom Brown  
+GitHub: [TomBrown4444](https://github.com/TomBrown4444)
