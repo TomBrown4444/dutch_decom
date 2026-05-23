@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Environment
+.env
+*.env
+
+# Data directories (gitignored per spec)
+netherlands/data/raw/*
+netherlands/data/processed/*
+netherlands/data/state/*
+netherlands/outputs/*
+
+# Keep the directory placeholders
+!netherlands/data/raw/.gitkeep
+!netherlands/data/processed/.gitkeep
+!netherlands/data/state/.gitkeep
+!netherlands/outputs/.gitkeep
+
+# macOS
+.DS_Store
